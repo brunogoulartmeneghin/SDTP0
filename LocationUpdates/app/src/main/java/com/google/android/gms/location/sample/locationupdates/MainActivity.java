@@ -86,7 +86,7 @@ public class MainActivity extends AppCompatActivity implements
     protected GoogleApiClient mGoogleApiClient;
     //MQTT client
     protected MqttAndroidClient Mqtt_Client;
-    protected String topic = "home/garden/fountain";
+    protected String topic = "test/topic";
     protected String payload = "the payload";
     protected byte[] encodedPayload;
     /**
@@ -142,7 +142,7 @@ public class MainActivity extends AppCompatActivity implements
         mLastUpdateTime = "";
 
         //Start mqtt service
-        Mqtt_Client = new MqttAndroidClient(this.getApplicationContext(), "0.0.0.0:1883",
+        Mqtt_Client = new MqttAndroidClient(this.getApplicationContext(), "http://172.16.253.144:1883",
                 clientId);
         try {
             IMqttToken token = Mqtt_Client.connect();
