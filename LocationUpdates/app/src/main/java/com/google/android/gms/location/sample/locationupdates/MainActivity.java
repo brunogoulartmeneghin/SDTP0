@@ -23,7 +23,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -34,8 +33,6 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
-import org.eclipse.paho.client.mqttv3.IMqttActionListener;
-import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -86,7 +83,7 @@ public class MainActivity extends AppCompatActivity implements
     protected GoogleApiClient mGoogleApiClient;
     //MQTT client
     protected MqttAndroidClient Mqtt_Client;
-    protected String topic = "test/topic";
+    protected String topic = "test";
     protected String payload = "the payload";
     protected byte[] encodedPayload;
     /**
@@ -141,29 +138,6 @@ public class MainActivity extends AppCompatActivity implements
         mRequestingLocationUpdates = false;
         mLastUpdateTime = "";
 
-        //Start mqtt service
-        Mqtt_Client = new MqttAndroidClient(this.getApplicationContext(), "http://172.16.253.144:1883",
-                clientId);
-        try {
-            IMqttToken token = Mqtt_Client.connect();
-            token.setActionCallback(new IMqttActionListener() {
-                @Override
-                public void onSuccess(IMqttToken asyncActionToken) {
-                    // We are connected
-                    Log.d(TAG, "onSuccess");
-                }
-
-                @Override
-                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                    // Something went wrong e.g. connection timeout or firewall problems
-                    Log.d(TAG, "onFailure");
-
-                }
-            });
-
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
         // Update values using data stored in the Bundle.
         updateValuesFromBundle(savedInstanceState);
 
@@ -351,7 +325,6 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onStop() {
         mGoogleApiClient.disconnect();
-        
         super.onStop();
     }
 
@@ -394,24 +367,7 @@ public class MainActivity extends AppCompatActivity implements
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
         updateUI();
-        //Toast.makeText(this, getResources().getString(R.string.location_updated_message),
-          //      Toast.LENGTH_SHORT).show();
-        payload = String.format("%s: %f", mLatitudeLabel,
-                mCurrentLocation.getLatitude()) +'\n'+
-                String.format("%s: %f", mLongitudeLabel,
-                        mCurrentLocation.getLongitude())+'\n'+
-                String.format("%s: %s", mLastUpdateTimeLabel,
-                        mLastUpdateTime);
-        encodedPayload = new byte[0];
-        try {
-            encodedPayload = payload.getBytes("UTF-8");
-            MqttMessage message = new MqttMessage(encodedPayload);
-            Mqtt_Client.publish(topic, message);
-            Toast.makeText(this, getResources().getString(R.string.update_message),
-                    Toast.LENGTH_SHORT).show();
-        } catch (UnsupportedEncodingException | MqttException e) {
-            e.printStackTrace();
-        }
+        publish();
     }
 
     @Override
@@ -429,6 +385,52 @@ public class MainActivity extends AppCompatActivity implements
         Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + result.getErrorCode());
     }
 
+    public void publish(){
+        Mqtt_Client = new MqttAndroidClient(this.getApplicationContext(), "tcp://192.166.25.5:1883",
+                clientId);
+        payload = String.format("%s: %f", mLatitudeLabel,
+                mCurrentLocation.getLatitude()) +'\n'+
+                String.format("%s: %f", mLongitudeLabel,
+                        mCurrentLocation.getLongitude())+'\n'+
+                String.format("%s: %s", mLastUpdateTimeLabel,
+                        mLastUpdateTime);
+        encodedPayload = new byte[0];
+
+        try {
+            encodedPayload = payload.getBytes("UTF-8");
+            MqttMessage message = new MqttMessage(encodedPayload);
+            message.setQos(0);
+            /*
+            IMqttToken token = Mqtt_Client.connect();
+            token.setActionCallback(new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    try {
+                        Mqtt_Client.publish(topic, message);
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
+                    Log.d(TAG, "onSuccess");
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    // Something went wrong e.g. connection timeout or firewall problems
+                    Log.d(TAG, "onFailure");
+
+                }
+            });
+            */
+            Mqtt_Client.connect();
+            try {
+                Mqtt_Client.publish(topic, message);
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        } catch (UnsupportedEncodingException | MqttException e) {
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Stores activity data in the Bundle.
